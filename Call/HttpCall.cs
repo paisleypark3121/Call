@@ -12,7 +12,13 @@ namespace Call
 {
     public class HttpCall : ICall
     {
-        public CallItem doCall(object id, CallMethod _CallMethod, string url, string body = null)
+        public Dictionary<string,object> doCall(
+            object id, 
+            CallMethod _CallMethod, 
+            CallContentType _CallContentType, 
+            string url, 
+            IResponseParser parser,
+            string body = null)
         {
             #region variables
             string endPoint = url;
@@ -44,6 +50,9 @@ namespace Call
                 _WebRequest.ServicePoint.ConnectionLimit = 1000;
                 _WebRequest.Timeout = 5000; _WebRequest.ReadWriteTimeout = 10000;
                 _WebRequest.Method = _CallMethod.ToString();
+                _WebRequest.ContentType = (!string.IsNullOrEmpty(CallContentTypeUtility.getCallContentType(_CallContentType))) ? 
+                    CallContentTypeUtility.getCallContentType(_CallContentType) : 
+                    CallContentTypeUtility.getCallContentType(CallContentType.plain);
                 _WebRequest.AllowAutoRedirect = false;
 
                 if (_CallMethod == CallMethod.POST)
@@ -66,7 +75,7 @@ namespace Call
                 response.Close();
                 #endregion
 
-                return new CallItem(id, 0, endPoint, payload, _response, null);
+                return parser.parse(_response);
             }
             #endregion
             #region catch
@@ -74,12 +83,18 @@ namespace Call
             {
                 string error = "Error in function " + this.GetType().Name + "." + MethodBase.GetCurrentMethod().Name + " - " + ex.Message;
                 System.Diagnostics.Trace.TraceError(error);
-                return new CallItem(id, -1, endPoint, payload, error, null);
+                return null;
             }
             #endregion
         }
 
-        public async Task<CallItem> doCallAsync(object id, CallMethod _CallMethod, string url, string body = null)
+        public async Task<Dictionary<string,object>> doCallAsync(
+            object id, 
+            CallMethod _CallMethod, 
+            CallContentType _CallContentType, 
+            string url,
+            IResponseParser parser,
+            string body = null)
         {
             #region variables
             string endPoint = url;
@@ -110,6 +125,9 @@ namespace Call
                 _WebRequest.Method = _CallMethod.ToString();
                 _WebRequest.ServicePoint.ConnectionLimit = 1000;
                 _WebRequest.Timeout = 5000; _WebRequest.ReadWriteTimeout = 10000;
+                _WebRequest.ContentType = (!string.IsNullOrEmpty(CallContentTypeUtility.getCallContentType(_CallContentType))) ?
+                    CallContentTypeUtility.getCallContentType(_CallContentType) :
+                    CallContentTypeUtility.getCallContentType(CallContentType.plain);
                 /////////////////////////////
                 //_WebRequest.AllowAutoRedirect = false;
                 /////////////////////////////
@@ -136,7 +154,7 @@ namespace Call
                     }
                 }
 
-                return new CallItem(id, 0, endPoint, payload, _response, null);
+                return parser.parse(_response);
             }
             #endregion
             #region catch
@@ -144,7 +162,7 @@ namespace Call
             {
                 string error = "Error in function " + this.GetType().Name + "." + GetActualAsyncMethodName() + " - " + ex.Message;
                 System.Diagnostics.Trace.TraceError(error);
-                return new CallItem(id, -1, endPoint, payload, error, null);
+                return null;
             }
             #endregion
         }

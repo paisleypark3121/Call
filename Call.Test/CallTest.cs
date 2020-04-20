@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -11,22 +12,30 @@ namespace Call.Test
         public void MockCallTest()
         {
             #region arrange
-            CallItem expected = new CallItem(1234, 0, "myUrl", "myPayload", "myResponse", "myInternalParameters");
+            Dictionary<string, object> expected = new Dictionary<string, object>
+            {
+                {"Response","Hello World!" }
+            };
             Mock<ICall> mock_Call = new Moq.Mock<ICall>();
-            mock_Call.Setup(x => x.doCall(It.IsAny<object>(), It.IsAny<CallMethod>(), It.IsAny<string>(), It.IsAny<string>())).Returns(expected);
+            IResponseParser parser = new SimpleParser();
+            mock_Call.Setup(x => x.doCall(
+                It.IsAny<object>(), 
+                It.IsAny<CallMethod>(), 
+                It.IsAny<CallContentType>(), 
+                It.IsAny<string>(), 
+                It.IsAny<IResponseParser>(),
+                It.IsAny<string>())).Returns(expected);
             #endregion
 
             #region act
-            CallItem actual = mock_Call.Object.doCall(1234, CallMethod.GET, "myUrl", "myPayload");
+            Dictionary<string, object> actual = mock_Call.Object.doCall(1234, CallMethod.GET, CallContentType.plain, "myUrl", parser, "myPayload");
             #endregion
 
             #region assert
-            Assert.AreEqual(expected.code, actual.code);
-            Assert.AreEqual(expected.endPoint, actual.endPoint);
-            Assert.AreEqual(expected.id, actual.id);
-            Assert.AreEqual(expected.internal_parameters, actual.internal_parameters);
-            Assert.AreEqual(expected.payload, actual.payload);
-            Assert.AreEqual(expected.response, actual.response);
+            Assert.IsNotNull(actual);
+            Assert.IsTrue(actual.Count == 1);
+            Assert.IsTrue(actual.ContainsKey("Response"));
+            Assert.AreEqual(expected["Response"],actual["Response"]);
             #endregion
         }
 
@@ -37,21 +46,19 @@ namespace Call.Test
             string endPoint = @"https://www.google.com";
             object id = "1234";
             CallMethod callMethod = CallMethod.GET;
-            CallItem expected = new CallItem(id, 0, endPoint, null, "", null);
+            CallContentType callContentType = CallContentType.plain;
             #endregion
 
             #region act
             ICall call = new HttpCall();
-            CallItem actual=call.doCall(id, callMethod, endPoint);
+            IResponseParser parser = new SimpleParser();
+            Dictionary<string, object> actual = call.doCall(id, callMethod, callContentType, endPoint,parser);
             #endregion
 
             #region assert
-            Assert.AreEqual(expected.code, actual.code);
-            Assert.AreEqual(expected.endPoint, actual.endPoint);
-            Assert.AreEqual(expected.id, actual.id);
-            Assert.AreEqual(expected.internal_parameters, actual.internal_parameters);
-            Assert.AreEqual(expected.payload, actual.payload);
-            Assert.IsNotNull(actual.response);
+            Assert.IsNotNull(actual);
+            Assert.IsTrue(actual.Count == 1);
+            Assert.IsTrue(actual.ContainsKey("Response"));
             #endregion
         }
     }

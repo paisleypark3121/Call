@@ -41,9 +41,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CallItem.cs" />
+    <Compile Include="CallContentType.cs" />
     <Compile Include="CallMethod.cs" />
     <Compile Include="HttpCall.cs" />
+    <Compile Include="SimpleParser.cs" />
+    <Compile Include="IResponseParser.cs" />
     <Compile Include="ICall.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Random.cs" />

@@ -8,8 +8,20 @@ namespace Call
 {
     public interface ICall
     {
-        CallItem doCall(object id, CallMethod _CallMethod, string endPoint, string payload = null);
+        Dictionary<string,object> doCall(
+            object id, 
+            CallMethod _CallMethod, 
+            CallContentType _CallContentType, 
+            string endPoint, 
+            IResponseParser responseParser,
+            string payload = null);
 
-        Task<CallItem> doCallAsync(object id, CallMethod _CallMethod, string endPoint, string payload = null);
+        Task<Dictionary<string, object>> doCallAsync(
+            object id, 
+            CallMethod _CallMethod, 
+            CallContentType _CallContentType, 
+            string endPoint,
+            IResponseParser responseParser,
+            string payload = null);
     }
 }
