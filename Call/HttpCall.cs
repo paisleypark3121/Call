@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.ConstrainedExecution;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -18,7 +21,8 @@ namespace Call
             CallContentType _CallContentType, 
             string url, 
             IResponseParser parser,
-            string body = null)
+            string body = null,
+            Dictionary<string, object> parameters = null)
         {
             #region variables
             string endPoint = url;
@@ -42,6 +46,25 @@ namespace Call
                     int index = url.IndexOf("?");
                     endPoint = url.Substring(0, index);
                     payload = url.Substring(index + 1);
+                } 
+                else if ((_CallMethod == CallMethod.GET) && (!string.IsNullOrEmpty(body)))
+                {
+                    url += "?" + body;
+                    body = null;
+                }
+                #endregion
+
+                #region parameters
+                if (parameters != null)
+                {
+                    if (parameters.ContainsKey("ByPassCert"))
+                    {
+                        ServicePointManager.ServerCertificateValidationCallback = new
+                        RemoteCertificateValidationCallback
+                        (
+                              delegate { return true; }
+                        );
+                    }
                 }
                 #endregion
 
@@ -83,7 +106,10 @@ namespace Call
             {
                 string error = "Error in function " + this.GetType().Name + "." + MethodBase.GetCurrentMethod().Name + " - " + ex.Message;
                 System.Diagnostics.Trace.TraceError(error);
-                return null;
+                return new Dictionary<string, object>()
+                {
+                    {"Error",error },
+                };
             }
             #endregion
         }
@@ -94,7 +120,8 @@ namespace Call
             CallContentType _CallContentType, 
             string url,
             IResponseParser parser,
-            string body = null)
+            string body = null,
+            Dictionary<string, object> parameters = null)
         {
             #region variables
             string endPoint = url;
@@ -119,8 +146,28 @@ namespace Call
                     endPoint = url.Substring(0, index);
                     payload = url.Substring(index + 1);
                 }
+                else if ((_CallMethod == CallMethod.GET) && (!string.IsNullOrEmpty(body)))
+                {
+                    url += "?" + body;
+                    body = null;
+                }
                 #endregion
 
+                #region parameters
+                if (parameters != null)
+                {
+                    if (parameters.ContainsKey("ByPassCert"))
+                    {
+                        ServicePointManager.ServerCertificateValidationCallback = new
+                        RemoteCertificateValidationCallback
+                        (
+                              delegate { return true; }
+                        );
+                    }
+                }
+                #endregion
+
+                #region request
                 HttpWebRequest _WebRequest = (HttpWebRequest)HttpWebRequest.Create(url);
                 _WebRequest.Method = _CallMethod.ToString();
                 _WebRequest.ServicePoint.ConnectionLimit = 1000;
@@ -128,9 +175,7 @@ namespace Call
                 _WebRequest.ContentType = (!string.IsNullOrEmpty(CallContentTypeUtility.getCallContentType(_CallContentType))) ?
                     CallContentTypeUtility.getCallContentType(_CallContentType) :
                     CallContentTypeUtility.getCallContentType(CallContentType.plain);
-                /////////////////////////////
-                //_WebRequest.AllowAutoRedirect = false;
-                /////////////////////////////
+                _WebRequest.AllowAutoRedirect = false;
 
                 if (_CallMethod == CallMethod.POST)
                 {
@@ -140,12 +185,11 @@ namespace Call
                     requestStream.Write(data, 0, data.Length);
                     requestStream.Close();
                 }
+                #endregion
 
+                #region response
                 string _response = null;
                 var response = await _WebRequest.GetResponseAsync();
-                ///////////////////////
-                string location = response.Headers["Location"];
-                ///////////////////////
                 using (Stream responseStream = response.GetResponseStream())
                 {
                     using (StreamReader myStreamReader = new StreamReader(responseStream, Encoding.Default))
@@ -153,6 +197,7 @@ namespace Call
                         _response = await myStreamReader.ReadToEndAsync();
                     }
                 }
+                #endregion
 
                 return parser.parse(_response);
             }
